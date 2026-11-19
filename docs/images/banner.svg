@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" role="img" aria-label="Langdesk: interpreter scheduling for clinics, schools and legal aid offices">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0fdfa"/>
+      <stop offset="1" stop-color="#e6f6f4"/>
+    </linearGradient>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#14b8a6"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="320" rx="24" fill="url(#bg)"/>
+  <g transform="translate(120 96) scale(2)">
+    <rect width="64" height="64" rx="16" fill="url(#tile)"/>
+    <path d="M14 17.5c0-2.5 2-4.5 4.5-4.5h17c2.5 0 4.5 2 4.5 4.5v11c0 2.5-2 4.5-4.5 4.5H25l-6.5 5.5V33h0c-2.5 0-4.5-2-4.5-4.5z" fill="#ffffff"/>
+    <path d="M27 31.5c0-2.5 2-4.5 4.5-4.5h17c2.5 0 4.5 2 4.5 4.5v11c0 2.5-2 4.5-4.5 4.5H48v5.5L41.5 47H31.5c-2.5 0-4.5-2-4.5-4.5z" fill="#0b3b37" fill-opacity="0.92"/>
+    <path d="M21 23h12M21 27.5h7" stroke="#0f766e" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M34 37.5h12M34 42h8" stroke="#5eead4" stroke-width="2.6" stroke-linecap="round"/>
+  </g>
+  <text x="290" y="168" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="76" font-weight="700" fill="#0f172a" letter-spacing="-1.5">Langdesk</text>
+  <text x="292" y="222" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="28" fill="#334155">Interpreter scheduling for clinics, schools and legal aid offices</text>
+  <text x="292" y="262" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="22" fill="#0f766e">Request in 20 seconds · ranked board · accept by text · video fallback · audit-ready reports</text>
+</svg>
