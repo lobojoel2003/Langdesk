@@ -14,6 +14,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from langdesk.core.roles import coordinator_required, is_coordinator
@@ -188,7 +189,12 @@ def _run(request, req, action, success: str):
         messages.error(request, str(exc))
     else:
         messages.success(request, success)
-    return redirect(request.POST.get("next") or req.get_absolute_url())
+    target = request.POST.get("next", "")
+    if not url_has_allowed_host_and_scheme(
+        target, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        target = req.get_absolute_url()
+    return redirect(target)
 
 
 @require_POST

@@ -304,6 +304,15 @@ def test_next_parameter_returns_to_the_board(coordinator_client, staffed):
     assert response["Location"] == reverse("scheduling:board")
 
 
+def test_next_parameter_cannot_leave_the_site(coordinator_client, staffed):
+    req, ana, _ = staffed
+    response = coordinator_client.post(
+        reverse("scheduling:assign", args=[req.pk]),
+        {"interpreter": ana.pk, "next": "https://evil.example.com/"},
+    )
+    assert response["Location"] == req.get_absolute_url()
+
+
 def test_switch_to_video_and_cancel(requester_client, staffed):
     req, *_ = staffed
     response = requester_client.post(reverse("scheduling:video", args=[req.pk]), follow=True)
