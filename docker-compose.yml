@@ -1,0 +1,90 @@
+# Langdesk: one-command self-hosting.
+#
+#   cp .env.example .env      # optional: set your organisation name, email and SMS
+#   docker compose up -d
+#   docker compose exec web langdesk-entrypoint manage createsuperuser
+#
+# Then open http://localhost:8000. See docs/deployment.md for HTTPS and backups.
+
+name: langdesk
+
+x-app: &app
+  image: ghcr.io/lobojoel2003/langdesk:${LANGDESK_VERSION:-latest}
+  build:
+    context: .
+    args:
+      VERSION: ${LANGDESK_VERSION:-local}
+  restart: unless-stopped
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    DATABASE_URL: ${DATABASE_URL:-postgres://langdesk:${POSTGRES_PASSWORD:-langdesk}@db:5432/langdesk}
+    CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+  volumes:
+    - langdesk-data:/app/data
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: langdesk
+      POSTGRES_USER: langdesk
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-langdesk}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langdesk -d langdesk"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  web:
+    <<: *app
+    command: ["web"]
+    ports:
+      - "${LANGDESK_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5)"
+      interval: 10s
+      timeout: 6s
+      retries: 30
+      start_period: 20s
+
+  worker:
+    <<: *app
+    command: ["worker"]
+    depends_on:
+      web:
+        condition: service_healthy
+
+  beat:
+    <<: *app
+    command: ["beat"]
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  langdesk-data:

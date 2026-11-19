@@ -1,0 +1,20 @@
+name: Feature request
+description: Suggest an improvement for coordinators, requesters or interpreters.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Who is affected (coordinator, requester, interpreter, regulator) and how often?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to happen?
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Rules you must follow, other tools you use, screenshots.

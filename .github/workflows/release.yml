@@ -1,0 +1,222 @@
+name: Release
+
+# Publishes a release when a version tag (vX.Y.Z) is pushed, or on demand.
+# The tag must match __version__ in langdesk/version.py. Each release gets:
+#   - Docker images on GHCR: X.Y.Z, X.Y, X, latest (linux/amd64 + linux/arm64)
+#   - a wheel and sdist, docker-compose.yml, .env.example and SHA256SUMS
+#   - release notes taken from the matching CHANGELOG.md section
+#   - the build number (this workflow's run number) baked into the image
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+", "v[0-9]+.[0-9]+.[0-9]+-*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, without the v (must match langdesk/version.py)"
+        required: true
+        type: string
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/langdesk
+
+jobs:
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      build_date: ${{ steps.version.outputs.build_date }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the tag matches the code
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          code_version="$(python3 -c 'import re;print(re.search(r"__version__ = \"(.+)\"", open("langdesk/version.py").read())[1])')"
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then tag="$GITHUB_REF_NAME"; else tag="v${INPUT_VERSION#v}"; fi
+          version="${tag#v}"
+          if [ "$version" != "$code_version" ]; then
+            echo "::error::Release $tag does not match langdesk/version.py ($code_version)"
+            exit 1
+          fi
+          case "$version" in *-*) prerelease=true ;; *) prerelease=false ;; esac
+          {
+            echo "version=$version"
+            echo "tag=$tag"
+            echo "prerelease=$prerelease"
+            echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> "$GITHUB_OUTPUT"
+          echo "Releasing $tag (build ${{ github.run_number }})" >> "$GITHUB_STEP_SUMMARY"
+      - name: Extract release notes from CHANGELOG.md
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { found=1; next }
+            found && /^## \[/ { exit }
+            found && /^\[[^]]+\]: / { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::CHANGELOG.md has no section for $VERSION"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: release-notes.md
+
+  ci:
+    name: CI
+    needs: prepare
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      packages: write
+
+  python-package:
+    name: Python package
+    needs: [prepare, ci]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install build
+      - run: python -m build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: python-package
+          path: dist/
+
+  docker:
+    name: Docker image
+    needs: [prepare, ci]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          flavor: latest=false
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.prepare.outputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.prepare.outputs.tag }},enable=${{ needs.prepare.outputs.prerelease == 'false' }}
+            type=semver,pattern={{major}},value=${{ needs.prepare.outputs.tag }},enable=${{ needs.prepare.outputs.prerelease == 'false' }}
+            type=raw,value=latest,enable=${{ needs.prepare.outputs.prerelease == 'false' }}
+            type=raw,value=${{ needs.prepare.outputs.version }}-build.${{ github.run_number }}
+          labels: |
+            org.opencontainers.image.title=Langdesk
+            org.opencontainers.image.description=Self-hosted interpreter scheduling for clinics, schools and legal aid offices
+            org.opencontainers.image.licenses=AGPL-3.0-only
+            io.langdesk.build-number=${{ github.run_number }}
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ needs.prepare.outputs.version }}
+            BUILD_NUMBER=${{ github.run_number }}
+            GIT_SHA=${{ github.sha }}
+            BUILD_DATE=${{ needs.prepare.outputs.build_date }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: mode=max
+          sbom: true
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+      - name: Summary
+        run: |
+          {
+            echo "### Docker image"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+            echo "Digest: \`${{ steps.build.outputs.digest }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  github-release:
+    name: GitHub release
+    needs: [prepare, python-package, docker]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: python-package
+          path: dist
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-notes
+          path: notes
+      - name: Assemble assets and notes
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          BUILD: ${{ github.run_number }}
+        run: |
+          mkdir -p assets
+          cp dist/* assets/
+          cp docker-compose.yml assets/docker-compose.yml
+          cp .env.example assets/env.example
+          (cd assets && sha256sum * > SHA256SUMS.txt)
+          {
+            cat notes/release-notes.md
+            echo
+            echo "### Install"
+            echo
+            echo '```bash'
+            echo "curl -LO https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/docker-compose.yml"
+            echo "LANGDESK_VERSION=${VERSION} docker compose up -d"
+            echo '```'
+            echo
+            echo "Image: \`${IMAGE}:${VERSION}\` · build ${BUILD} · commit \`${GITHUB_SHA::7}\`"
+          } > body.md
+          cat body.md
+      - name: Publish release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Langdesk v${{ needs.prepare.outputs.version }}
+          body_path: body.md
+          prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
+          make_latest: ${{ needs.prepare.outputs.prerelease == 'true' && 'false' || 'true' }}
+          fail_on_unmatched_files: true
+          files: assets/*

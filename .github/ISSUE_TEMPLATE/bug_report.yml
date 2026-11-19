@@ -1,0 +1,40 @@
+name: Bug report
+description: Something in Langdesk isn't working as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Never include client names, dates of birth, diagnoses or real phone numbers.**
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create a Spanish request for tomorrow at 10:00
+        2. Reply YES from the SMS simulator
+        3. ...
+  - type: input
+    id: version
+    attributes:
+      label: Langdesk version and build
+      description: Shown in the page footer and at /healthz, e.g. v1.0.0 · build 12.
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: How do you run Langdesk?
+      options: [Docker Compose, Docker (other), From source, Other]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      render: text
