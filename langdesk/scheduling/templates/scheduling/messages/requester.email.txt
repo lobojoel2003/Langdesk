@@ -1,0 +1,19 @@
+{% autoescape off %}{% if event == "assigned" %}Good news: {{ interpreter.short_name }} will interpret {{ req.language }} for {{ req.reference }}.
+{% elif event == "video_fallback" %}No in-person {{ req.language }} interpreter has confirmed yet, so {{ req.reference }} has switched to video interpreting.
+
+Join the call from the room on a device with a camera and speaker:
+{{ req.video_url }}
+{% elif event == "unassigned" %}The interpreter for {{ req.reference }} can no longer attend. Langdesk is already offering it to other {{ req.language }} interpreters.{% if reason %}
+
+Reason: {{ reason }}{% endif %}
+{% elif event == "cancelled" %}{{ req.reference }} has been cancelled.{% if reason %}
+
+Reason: {{ reason }}{% endif %}
+{% endif %}
+  Language: {{ req.language }}
+  When:     {{ when }}
+  Where:    {{ mode|capfirst }}{% if req.appointment_ref %}
+  Appointment: {{ req.appointment_ref }}{% endif %}
+
+Details and history: {{ request_url }}
+{% endautoescape %}

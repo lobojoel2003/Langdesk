@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load langdesk %}
+{% block title %}{% if mine %}My requests{% else %}Requests{% endif %}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{% if mine %}My requests{% else %}Requests{% endif %}</h1><p>{% if mine %}Requests you've made, and whether an interpreter is confirmed.{% else %}Every request across your sites.{% endif %}</p></div>
+  <div class="head-actions">
+    <form method="get" class="row"><input type="hidden" name="view" value="{{ view }}"><input type="search" name="q" value="{{ query }}" placeholder="Reference, appointment or language" style="width:280px"></form>
+    <a class="btn primary" href="{% url 'scheduling:new' %}">{% icon 'plus' 16 %} New request</a>
+  </div>
+</div>
+<nav class="tabs" aria-label="Filter">
+  {% for key, label in filters %}<a href="?view={{ key }}{% if query %}&q={{ query|urlencode }}{% endif %}" class="{% if key == view %}active{% endif %}">{{ label }}</a>{% endfor %}
+</nav>
+<div class="card">
+  {% if page.object_list %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Request</th><th>When</th><th>How and where</th><th>Interpreter</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for req in page.object_list %}
+    <tr>
+      <td><a class="row-link" href="{{ req.get_absolute_url }}">{{ req.language }}</a><div class="small muted mono">{{ req.reference }}{% if req.appointment_ref %} · {{ req.appointment_ref }}{% endif %}</div></td>
+      <td class="nowrap">{{ req|when }}</td>
+      <td>{% icon req.modality 15 %} {{ req.get_modality_display }}{% if req.location %}<div class="small muted">{{ req.location }}{% if req.location_detail %}, {{ req.location_detail }}{% endif %}</div>{% endif %}</td>
+      <td>{% if req.interpreter %}{% if mine %}{{ req.interpreter.short_name }}{% else %}{{ req.interpreter.name }}{% endif %}{% else %}<span class="faint">–</span>{% endif %}</td>
+      <td>{% status_pill req %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% if page.has_other_pages %}
+  <div class="pagination">
+    {% if page.has_previous %}<a class="btn sm" href="?view={{ view }}&q={{ query|urlencode }}&page={{ page.previous_page_number }}">Previous</a>{% endif %}
+    <span class="muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a class="btn sm" href="?view={{ view }}&q={{ query|urlencode }}&page={{ page.next_page_number }}">Next</a>{% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="empty"><div class="icon-wrap">{% icon 'list' 22 %}</div><strong>Nothing here yet</strong><p>Requests you make show up here with their status.</p><a class="btn primary" href="{% url 'scheduling:new' %}">Request an interpreter</a></div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,6 @@
+{% autoescape off %}Hello {{ offer.interpreter.name }},
+
+The {{ req.language }} request for {{ when }} ({{ req.reference }}) {% if cancelled %}is no longer needed{% else %}has been filled by another interpreter{% endif %}.
+
+No action is needed. Thank you for being available.
+{% endautoescape %}

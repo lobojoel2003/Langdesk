@@ -1,0 +1,1 @@
+{% autoescape off %}{{ org }}: CANCELLED. {{ req.language }}, {{ when }} ({{ req.reference }}) is no longer needed.{% if reason %} {{ reason }}{% endif %}{% endautoescape %}

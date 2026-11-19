@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load langdesk %}
+{% block title %}Interpreters{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Interpreters</h1><p>{{ interpreters|length }} active on the roster. Add or edit people in the admin.</p></div>
+  <div class="head-actions">
+    <form method="get"><select name="language" onchange="this.form.submit()" style="min-width:200px"><option value="">All languages</option>{% for lang in languages %}<option value="{{ lang.code }}"{% if lang.code == language %} selected{% endif %}>{{ lang.name }}</option>{% endfor %}</select></form>
+    {% if user.is_staff %}<a class="btn" href="{% url 'admin:roster_interpreter_add' %}">{% icon 'plus' 16 %} Add interpreter</a>{% endif %}
+  </div>
+</div>
+<div class="roster">
+  {% for person in interpreters %}
+  <article class="card">
+    <div class="person">
+      <span class="avatar">{{ person.initials }}</span>
+      <div><div class="name"><a href="{% url 'scheduling:interpreter' person.pk %}">{{ person.name }}</a></div><div class="small muted">{{ person.get_employment_display }}{% if person.agency_name %} · {{ person.agency_name }}{% endif %}{% if person.home_location %} · {{ person.home_location }}{% endif %}</div></div>
+    </div>
+    <div class="chips">{% for skill in person.language_skills.all %}<span class="chip skill">{{ skill.language }} <span class="cred">{% if skill.effective_credential == 'certified' %}cert{% else %}qual{% endif %}</span></span>{% endfor %}</div>
+    <div class="spread small muted">
+      <span>{% if person.offers_in_person %}{% icon 'in_person' 15 'In person' %}{% endif %} {% if person.offers_video %}{% icon 'video' 15 'Video' %}{% endif %} {% if person.offers_phone %}{% icon 'phone' 15 'Phone' %}{% endif %}</span>
+      <span>{{ person.upcoming }} this week{% if person.sms_opt_out %} · <span style="color:var(--danger)">texts off</span>{% endif %}</span>
+    </div>
+  </article>
+  {% empty %}
+  <div class="card empty" style="grid-column:1/-1"><div class="icon-wrap">{% icon 'users' 22 %}</div><strong>No interpreters yet</strong><p>Add staff and contract interpreters in the admin to start assigning.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

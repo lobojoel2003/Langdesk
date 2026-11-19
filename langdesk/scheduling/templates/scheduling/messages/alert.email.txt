@@ -1,0 +1,10 @@
+{% autoescape off %}{{ req.reference }} needs attention: {{ problem }}
+
+  Language: {{ req.language }}
+  When:     {{ when }}
+  Where:    {{ mode|capfirst }}
+
+Open the request to assign someone directly, switch to video, or record that an outside
+phone line was used:
+{{ request_url }}
+{% endautoescape %}

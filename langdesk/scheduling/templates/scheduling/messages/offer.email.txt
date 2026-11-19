@@ -1,0 +1,20 @@
+{% autoescape off %}Hello {{ offer.interpreter.name }},
+
+{{ org }} needs a {{ req.language }} interpreter.
+
+  When:  {{ when }}
+  Where: {{ mode|capfirst }}{% if req.location.address and req.modality == "in_person" %}
+         {{ req.location.address }}{% endif %}
+  Type:  {{ req.get_service_type_display }}
+  Ref:   {{ req.reference }}{% if req.appointment_ref %} (appointment {{ req.appointment_ref }}){% endif %}
+{% if req.notes %}
+  Notes: {{ req.notes }}
+{% endif %}
+Accept or decline here:
+{{ offer_url }}
+
+Or reply to our text with YES {{ offer.code }} or NO {{ offer.code }}.
+The first interpreter to accept gets the assignment.
+{% if support %}
+Questions: {{ support }}{% endif %}
+{% endautoescape %}

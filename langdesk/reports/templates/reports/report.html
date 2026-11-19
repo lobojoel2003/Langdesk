@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load langdesk %}
+{% block title %}Language access report {{ r.period.label }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Language access report · {{ r.period.label }}</h1>
+    <p>{{ org_name }} · generated {{ r.generated_at|date:"M j, Y g:i A" }} · requests by appointment date</p>
+  </div>
+  <div class="head-actions no-print">
+    {% if years|length > 1 %}<nav class="year-switch" aria-label="Year">{% for y in years %}<a href="?year={{ y }}" class="{% if r.period.label == y|stringformat:'s' %}active{% endif %}">{{ y }}</a>{% endfor %}</nav>{% endif %}
+    <a class="btn" href="{% url 'reports:summary_csv' %}?start={{ r.period.start|date:'Y-m-d' }}&end={{ r.period.end|date:'Y-m-d' }}">{% icon 'download' 16 %} Summary CSV</a>
+    <a class="btn" href="{% url 'reports:log_csv' %}?start={{ r.period.start|date:'Y-m-d' }}&end={{ r.period.end|date:'Y-m-d' }}">{% icon 'download' 16 %} Request log CSV</a>
+    <button class="btn" type="button" onclick="window.print()">{% icon 'print' 16 %} Print</button>
+  </div>
+</div>
+
+{% if r.awaiting %}
+<div class="callout warn" style="margin-bottom:1.25rem">{% icon 'alert' 18 %}<p><strong>{{ r.awaiting }} finished request{{ r.awaiting|pluralize }} still need{{ r.awaiting|pluralize:"s," }} an outcome.</strong> Record them so this report is complete. <a href="{% url 'scheduling:list' %}?view=outcome">Review them</a>.</p></div>
+{% endif %}
+
+<section class="kpis kpis-4" aria-label="Headline figures">
+  <div class="kpi hero"><span class="label">Fill rate</span><span class="value">{% if r.fill_rate is not None %}{{ r.fill_rate }}<small>%</small>{% else %}–{% endif %}</span><span class="note">{{ r.served }} of {{ r.needed }} needing an interpreter got one</span></div>
+  <div class="kpi"><span class="label">Requests</span><span class="value">{{ r.total }}</span><span class="note">{{ r.language_count }} language{{ r.language_count|pluralize }}</span></div>
+  <div class="kpi"><span class="label">Certified interpreter</span><span class="value">{% if r.certified_rate is not None %}{{ r.certified_rate }}<small>%</small>{% else %}–{% endif %}</span><span class="note">of interpreted encounters</span></div>
+  <div class="kpi{% if r.unfilled %} alert{% endif %}"><span class="label">Unfilled</span><span class="value">{{ r.unfilled }}</span><span class="note">no interpreter found</span></div>
+  <div class="kpi"><span class="label">Interpreter hours</span><span class="value">{{ r.hours }}</span><span class="note">interpreted or outside line</span></div>
+  <div class="kpi"><span class="label">Median notice</span><span class="value">{% if r.median_lead %}{{ r.median_lead.0 }}<small>{{ r.median_lead.1 }}</small>{% else %}–{% endif %}</span><span class="note">request to appointment</span></div>
+  <div class="kpi"><span class="label">Median time to fill</span><span class="value">{% if r.median_fill_minutes is not None %}{{ r.median_fill_minutes }}<small>min</small>{% else %}–{% endif %}</span><span class="note">request to confirmed</span></div>
+  <div class="kpi"><span class="label">Switched to video</span><span class="value">{{ r.fallbacks }}</span><span class="note">automatic or manual fallback</span></div>
+</section>
+
+<div class="stack-lg viz">
+  <section class="card">
+    <div class="card-head"><div><h2>Requests by month</h2><p>All requests, by appointment date</p></div></div>
+    <div class="card-body">
+      <div class="chart" role="img" aria-label="Requests per month; values in the table below">
+        <div class="y-axis" aria-hidden="true">{% for t in r.month_ticks %}<span style="bottom:{{ t.percent|stringformat:'.1f' }}%">{{ t.value }}</span>{% endfor %}</div>
+        <div class="plot">
+          {% for t in r.month_ticks %}{% if t.value %}<div class="gridline" style="bottom:{{ t.percent|stringformat:'.1f' }}%"></div>{% endif %}{% endfor %}
+          <div class="columns">
+            {% for m in r.months %}
+            <div class="col" tabindex="0" data-tip="{{ m.long }}: {{ m.value }} request{{ m.value|pluralize }}">{% if m.value %}<div class="col-bar" style="height:{{ m.percent|stringformat:'.1f' }}%">{% if m.is_peak %}<span class="cap">{{ m.value }}</span>{% endif %}</div>{% endif %}</div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="col-labels">{% for m in r.months %}<span>{{ m.label }}</span>{% endfor %}</div>
+      </div>
+      <details class="disclose no-print" style="margin:1rem -1.25rem -1.25rem">
+        <summary>Show as table</summary>
+        <div class="table-wrap"><table><thead><tr><th>Month</th><th class="num">Requests</th></tr></thead><tbody>{% for m in r.months %}<tr><td>{{ m.long }}</td><td class="num">{{ m.value }}</td></tr>{% endfor %}</tbody></table></div>
+      </details>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div><h2>By language</h2><p>Fill rate counts requests that needed an interpreter: interpreted, outside line, unfilled or interpreter no-show</p></div></div>
+    {% if r.languages %}
+    <div class="table-wrap"><table class="lang-table">
+      <thead><tr><th>Language</th><th class="bar-cell">Requests</th><th class="num">Provided</th><th class="num">Unfilled</th><th class="num">Fill rate</th><th class="num">Hours</th></tr></thead>
+      <tbody>
+      {% for e in r.languages %}
+        <tr>
+          <td><strong>{{ e.language }}</strong></td>
+          <td class="bar-cell"><div class="bar-track"><div class="bar" style="width:calc((100% - 3rem) * {{ e.fraction|stringformat:'.4f' }})" data-tip="{{ e.language }}: {{ e.requests }} requests"></div><span class="bar-value">{{ e.requests }}</span></div></td>
+          <td class="num">{{ e.served }}</td>
+          <td class="num">{{ e.unfilled }}</td>
+          <td class="num">{% if e.fill_rate is not None %}{{ e.fill_rate }}%{% else %}–{% endif %}</td>
+          <td class="num">{{ e.hours }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<p class="card-body muted">No requests in this period.</p>{% endif %}
+  </section>
+
+  <div class="report-grid">
+    {% include "reports/_bars.html" with title="Outcomes" subtitle="Share of all requests" bars=r.outcomes %}
+    {% include "reports/_bars.html" with title="How it was delivered" subtitle="Interpreted or outside line" bars=r.modalities %}
+    {% include "reports/_bars.html" with title="By site" subtitle="Share of all requests" bars=r.sites %}
+    {% include "reports/_bars.html" with title="By department" subtitle="Share of all requests" bars=r.departments %}
+    {% include "reports/_bars.html" with title="By type of service" subtitle="Share of all requests" bars=r.services %}
+    {% include "reports/_bars.html" with title="Interpreter hours by type" subtitle="Staff, contract and agency" bars=r.employment_hours unit="h" %}
+  </div>
+
+  <section class="card card-pad">
+    <h2 style="margin-bottom:.75rem">Notes and definitions</h2>
+    <dl class="definitions">
+      <dt>Client details</dt><dd>Langdesk stores appointment references only. No client names, dates of birth or diagnoses are held, so this report and the request log can be shared with reviewers.</dd>
+      <dt>Needed an interpreter</dt><dd>Closed requests that were interpreted, covered by an outside phone or video line, went unfilled, or where the interpreter did not attend. Cancelled appointments and client no-shows are excluded.</dd>
+      <dt>Client declined</dt><dd>{{ r.client_declined }} request{{ r.client_declined|pluralize }} where the client declined a free interpreter after being offered one. Langdesk records the waiver; it never counts a family member as an interpreter.</dd>
+      <dt>Other outcomes</dt><dd>{{ r.cancelled }} cancelled · {{ r.client_no_show }} client no-show · {{ r.interpreter_no_show }} interpreter no-show · {{ r.vendor_line }} covered by an outside line · {{ r.upcoming }} still upcoming.</dd>
+    </dl>
+  </section>
+</div>
+{% endblock %}

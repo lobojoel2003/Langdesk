@@ -1,0 +1,65 @@
+{% load static langdesk %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{% block title %}{{ org_name }}{% endblock %} · Langdesk</title>
+  <link rel="icon" href="{% static 'langdesk/favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'langdesk/app.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}"{% block body_attrs %}{% endblock %}>
+{% block topbar %}
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="{% url 'home' %}">
+      <img src="{% static 'langdesk/logo.svg' %}" alt="">
+      <span>Langdesk</span>
+      {% if org_name != "Langdesk" %}<span class="org">{{ org_name }}</span>{% endif %}
+    </a>
+    {% if user.is_authenticated %}
+    {% with name=request.resolver_match.url_name %}
+    <nav class="nav" aria-label="Main">
+      <a href="{% url 'scheduling:new' %}" class="{% if name == 'new' %}active{% endif %}">{% icon 'plus' 16 %} New request</a>
+      {% if is_coordinator %}
+      <a href="{% url 'scheduling:board' %}" class="{% if name == 'board' %}active{% endif %}">{% icon 'board' 16 %} Board</a>
+      {% endif %}
+      <a href="{% url 'scheduling:list' %}" class="{% if name == 'list' or name == 'detail' or name == 'edit' %}active{% endif %}">{% icon 'list' 16 %} {% if is_coordinator %}Requests{% else %}My requests{% endif %}</a>
+      {% if is_coordinator %}
+      <a href="{% url 'scheduling:interpreters' %}" class="{% if name == 'interpreters' or name == 'interpreter' %}active{% endif %}">{% icon 'users' 16 %} Interpreters</a>
+      <a href="{% url 'reports:report' %}" class="{% if name == 'report' %}active{% endif %}">{% icon 'chart' 16 %} Reports</a>
+      {% if sms_simulator %}<a href="{% url 'messaging:simulator' %}" class="{% if name == 'simulator' %}active{% endif %}">{% icon 'message' 16 %} SMS simulator</a>{% endif %}
+      {% endif %}
+      {% if user.is_staff %}<a href="{% url 'admin:index' %}">{% icon 'settings' 16 %} Admin</a>{% endif %}
+    </nav>
+    {% endwith %}
+    <div class="user">
+      <span class="who">{{ user.get_full_name|default:user.get_username }}</span>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="linklike" type="submit">Sign out</button></form>
+    </div>
+    {% endif %}
+  </div>
+</header>
+{% endblock %}
+
+<main class="container {% block container_class %}{% endblock %}">
+  {% if messages %}
+  <ul class="messages" role="status">
+    {% for message in messages %}<li class="message {{ message.tags }}">{% if message.level_tag == 'error' %}{% icon 'alert' 18 %}{% else %}{% icon 'check' 18 %}{% endif %}<span>{{ message }}</span></li>{% endfor %}
+  </ul>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+
+{% block footer %}
+<footer class="footer">
+  <div class="footer-inner">
+    <span>{% icon 'lock' 14 %} Langdesk keeps client details out: appointment references only, never names or diagnoses.</span>
+    <span class="num">Langdesk v{{ langdesk_build.version }} · build {{ langdesk_build.build }}{% if langdesk_build.commit %} · {{ langdesk_build.commit }}{% endif %}</span>
+  </div>
+</footer>
+{% endblock %}
+<script src="{% static 'langdesk/app.js' %}" defer></script>
+</body>
+</html>

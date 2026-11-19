@@ -1,0 +1,8 @@
+{% autoescape off %}Hello {{ interpreter.name }},
+
+The {{ req.language }} assignment on {{ when }} ({{ req.reference }}) is cancelled.{% if reason %}
+
+Reason: {{ reason }}{% endif %}
+
+The attached file removes it from your calendar.
+{% endautoescape %}

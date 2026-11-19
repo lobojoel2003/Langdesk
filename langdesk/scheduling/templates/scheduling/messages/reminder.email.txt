@@ -1,0 +1,12 @@
+{% autoescape off %}Hello {{ interpreter.name }},
+
+A reminder that you're interpreting {{ req.language }} {{ lead }}.
+
+  When:  {{ when }}
+  Where: {{ mode|capfirst }}{% if req.location.address and req.modality == "in_person" %}
+         {{ req.location.address }}{% endif %}{% if req.video_url %}
+  Join:  {{ req.video_url }}{% endif %}
+  Ref:   {{ req.reference }}
+{% if req.modality == "in_person" and req.location.arrival_instructions %}
+On arrival: {{ req.location.arrival_instructions }}
+{% endif %}{% endautoescape %}

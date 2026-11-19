@@ -1,0 +1,13 @@
+{% autoescape off %}Hello {{ interpreter.name }},
+
+An assignment you accepted has changed. Here are the current details:
+
+  When:  {{ when }}
+  Where: {{ mode|capfirst }}{% if req.location.address and req.modality == "in_person" %}
+         {{ req.location.address }}{% endif %}{% if req.video_url %}
+  Join:  {{ req.video_url }}{% endif %}
+  Ref:   {{ req.reference }}
+
+The attached invite updates your calendar. If the new time doesn't work, contact the
+language access coordinator as soon as possible.
+{% endautoescape %}

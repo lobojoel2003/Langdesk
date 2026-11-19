@@ -1,0 +1,24 @@
+{% load langdesk %}
+<li class="cand">
+  <span class="avatar">{{ c.interpreter.initials }}</span>
+  <div>
+    <div class="cand-name">{% if rank %}<span class="rank">#{{ rank }}</span>{% endif %}<a href="{% url 'scheduling:interpreter' c.interpreter.pk %}" style="color:inherit">{{ c.interpreter.name }}</a></div>
+    <div class="chips">
+      {% for reason in c.reasons %}<span class="chip{% if reason == 'Certified' or reason == 'Same site' or reason == 'Knows this case' %} good{% endif %}">{{ reason }}</span>{% endfor %}
+      {% for caution in c.cautions %}<span class="chip warn">{{ caution }}</span>{% endfor %}
+    </div>
+  </div>
+  <div class="fit" data-tip="Fit score {{ c.score }}" tabindex="0" aria-label="Fit score {{ c.score }}">
+    <div class="meter"><span style="width:{{ c.percent|stringformat:'d' }}%"></span></div><span class="num">{{ c.score }}</span>
+  </div>
+  <div class="cand-actions">
+    {% if c.offer and c.offer.status == 'pending' %}
+      <span class="pill tone-offered">Offered {{ c.offer.sent_at|until }}</span>
+    {% elif c.offer and c.offer.status == 'expired' %}
+      <span class="pill tone-closed-muted">No reply</span>
+    {% else %}
+      <form method="post" action="{% url 'scheduling:offer' req.pk %}" class="inline">{% csrf_token %}<input type="hidden" name="interpreter" value="{{ c.interpreter.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn sm">Offer</button></form>
+    {% endif %}
+    <form method="post" action="{% url 'scheduling:assign' req.pk %}" class="inline">{% csrf_token %}<input type="hidden" name="interpreter" value="{{ c.interpreter.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn sm primary">Assign</button></form>
+  </div>
+</li>

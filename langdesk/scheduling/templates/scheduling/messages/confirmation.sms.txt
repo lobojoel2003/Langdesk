@@ -1,0 +1,1 @@
+{% autoescape off %}{{ org }}: confirmed. {{ req.language }}, {{ when }}, {{ mode }}. Ref {{ req.reference }}.{% if req.video_url %} Join: {{ req.video_url }}{% endif %}{% if interpreter.email %} Calendar invite sent by email.{% endif %}{% endautoescape %}

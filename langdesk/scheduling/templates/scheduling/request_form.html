@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% load langdesk %}
+{% block title %}{% if creating %}New request{% else %}Edit {{ req.reference }}{% endif %}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{% if creating %}Request an interpreter{% else %}Edit {{ req.reference }}{% endif %}</h1>
+    <p>{% if creating %}Language, when, where. That's it: Langdesk finds the interpreter.{% else %}Changes to the time or place are sent to the interpreter with an updated calendar invite.{% endif %}</p>
+  </div>
+</div>
+
+<div class="grid-form">
+<form method="post" class="card" data-request-form novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="form-section"><div class="message error">{{ form.non_field_errors|first }}</div></div>{% endif %}
+
+  <div class="form-section">
+    <h2><span class="step">1</span> Language</h2>
+    <div class="field">
+      <label for="id_language" class="sr-only">Language</label>
+      <select name="language" id="id_language" class="input-lg" required>
+        <option value="">Choose a language</option>
+        {% with selected=form.language.value|stringformat:"s" %}
+        {% if frequent %}
+        <optgroup label="Most requested">
+          {% for lang in frequent %}<option value="{{ lang.pk }}"{% if selected == lang.pk|stringformat:"s" %} selected{% endif %}>{{ lang.name }}{% if lang.native_name %} · {{ lang.native_name }}{% endif %}</option>{% endfor %}
+        </optgroup>
+        <optgroup label="All languages">
+        {% endif %}
+          {% for lang in form.fields.language.queryset %}<option value="{{ lang.pk }}"{% if selected == lang.pk|stringformat:"s" and not lang in frequent %} selected{% endif %}>{{ lang.name }}{% if lang.native_name %} · {{ lang.native_name }}{% endif %}</option>{% endfor %}
+        {% if frequent %}</optgroup>{% endif %}
+        {% endwith %}
+      </select>
+      {{ form.language.errors }}
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h2><span class="step">2</span> When</h2>
+    <div class="field-row">
+      <div class="field">
+        <label for="id_date">Date</label>
+        {{ form.date }}
+        {{ form.date.errors }}
+      </div>
+      <div class="field">
+        <label for="id_start_time">Start</label>
+        {{ form.start_time }}
+        {{ form.start_time.errors }}
+      </div>
+    </div>
+    <div class="field">
+      <span class="label">Length</span>
+      <div class="choices">
+        {% for choice in form.duration %}<label class="choice">{{ choice.tag }}<span>{{ choice.choice_label }}</span></label>{% endfor %}
+      </div>
+      {{ form.duration.errors }}
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h2><span class="step">3</span> How and where</h2>
+    <div class="segmented" role="radiogroup" aria-label="Modality">
+      {% for choice in form.modality %}
+      <label>{{ choice.tag }}<span class="seg">{% icon choice.data.value 22 %}{{ choice.choice_label }}<small>{% if choice.data.value == 'in_person' %}At your site{% elif choice.data.value == 'video' %}Jitsi link included{% else %}Audio only{% endif %}</small></span></label>
+      {% endfor %}
+    </div>
+    {{ form.modality.errors }}
+    <div class="field-row" style="margin-top:1.1rem">
+      <div class="field">
+        <label for="id_location">Site <span class="opt" data-show-when="video phone">(for reporting)</span></label>
+        {{ form.location }}
+        {{ form.location.errors }}
+      </div>
+      <div class="field" data-show-when="in_person">
+        <label for="id_location_detail">Room or area <span class="opt">(optional)</span></label>
+        {{ form.location_detail }}
+        {{ form.location_detail.errors }}
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h2><span class="step">4</span> Reference <span class="opt muted small" style="font-weight:450">(optional)</span></h2>
+    <div class="field-row">
+      <div class="field">
+        <label for="id_appointment_ref">Appointment reference</label>
+        {{ form.appointment_ref }}
+        {{ form.appointment_ref.errors }}
+      </div>
+      <div class="field">
+        <label for="id_service_type">Type</label>
+        {{ form.service_type }}
+      </div>
+      <div class="field">
+        <label for="id_department">Department</label>
+        {{ form.department }}
+      </div>
+    </div>
+    <div class="field">
+      <label for="id_notes">Notes for the interpreter <span class="opt">(optional)</span></label>
+      {{ form.notes }}
+      {{ form.notes.errors }}
+      <span class="help">Logistics only, such as "Check in at the front desk".</span>
+    </div>
+    <div class="callout" style="margin-top:1rem">{% icon 'lock' 18 %}<p><strong>Keep client details out.</strong> Use your appointment or case number. Never enter names, birth dates or diagnoses.</p></div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn primary lg" type="submit">{% if creating %}Request interpreter{% else %}Save changes{% endif %}</button>
+    <a class="btn ghost" href="{% if req %}{{ req.get_absolute_url }}{% else %}{% url 'home' %}{% endif %}">Cancel</a>
+  </div>
+</form>
+
+<aside>
+  <h2 class="section-title">What happens next</h2>
+  <ol class="next-steps">
+    <li><span class="bubble">{% icon 'users' 18 %}</span><div><strong>Best-fit interpreters get a text</strong><span>Langdesk ranks the roster by language, credential, availability and site, then offers the job to the top few.</span></div></li>
+    <li><span class="bubble">{% icon 'message' 18 %}</span><div><strong>First to reply YES gets it</strong><span>They get a calendar invite. You get an email with who's coming. Everyone else is told it's filled.</span></div></li>
+    <li><span class="bubble">{% icon 'video' 18 %}</span><div><strong>Video if nobody can come</strong><span>If no one has confirmed an hour before, the request switches to a video link so the client is never left without an interpreter.</span></div></li>
+    <li><span class="bubble">{% icon 'check' 18 %}</span><div><strong>Record the outcome</strong><span>Afterwards, mark what happened. That's what fills the yearly language-access report.</span></div></li>
+  </ol>
+</aside>
+</div>
+{% endblock %}

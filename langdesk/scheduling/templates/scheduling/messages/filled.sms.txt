@@ -1,0 +1,1 @@
+{% autoescape off %}{{ org }}: the {{ req.language }} request for {{ when }} {% if cancelled %}is no longer needed{% else %}has been filled{% endif %}. No action needed. Thank you!{% endautoescape %}

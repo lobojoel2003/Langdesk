@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load langdesk %}
+{% block title %}Board{% endblock %}
+{% block body_attrs %} data-refresh="60"{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Board</h1>
+    <p>{% now "l, F j" %} · open requests with the best-fit interpreters already ranked</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn primary" href="{% url 'scheduling:new' %}">{% icon 'plus' 16 %} New request</a>
+  </div>
+</div>
+
+<section class="kpis" aria-label="Today at a glance">
+  <div class="kpi{% if stats.urgent %} alert{% endif %}"><span class="label">Unassigned, next 24 h</span><span class="value">{{ stats.urgent }}</span><span class="note">{{ stats.open }} unassigned in total</span></div>
+  <div class="kpi"><span class="label">Waiting on replies</span><span class="value">{{ stats.pending }}</span><span class="note">offers out by text and email</span></div>
+  <div class="kpi"><span class="label">Covered today</span><span class="value">{{ stats.assigned_today }}</span><span class="note">assigned or done</span></div>
+  <div class="kpi"><span class="label">Needs an outcome</span><span class="value">{{ stats.needs_outcome }}</span><span class="note">finished, not yet recorded</span></div>
+</section>
+
+<div class="grid-2">
+  <div>
+    {% for label, cards in days.items %}
+    <section class="day-group">
+      <h2 class="section-title">{{ label }} <span class="count">{{ cards|length }}</span></h2>
+      {% for card in cards %}{% with req=card.req %}
+      <article class="card req-card{% if req.is_urgent %} urgent{% endif %}">
+        <div class="req-head">
+          <div class="time"><strong>{{ req.starts_at|time:"g:i" }}</strong><span>{{ req.starts_at|time:"A" }} · {{ req.duration_minutes|hours }}</span></div>
+          <div>
+            <div class="req-title">
+              <a class="lang row-link" href="{{ req.get_absolute_url }}">{{ req.language }}</a>
+              {% status_pill req card.pending|length %}
+              {% if req.is_urgent %}<span class="badge-urgent">{% icon 'clock' 14 %} starts {{ req.starts_at|until }}</span>{% endif %}
+            </div>
+            <div class="req-meta">
+              <span>{% icon req.modality 15 %} {{ req.get_modality_display }}{% if req.fell_back_to_video %} (fallback){% endif %}</span>
+              {% if req.location %}<span>{% icon 'pin' 15 %} {{ req.location }}{% if req.location_detail %}, {{ req.location_detail }}{% endif %}</span>{% endif %}
+              {% if req.department %}<span>{{ req.department }}</span>{% endif %}
+              <span class="mono">{{ req.reference }}</span>
+            </div>
+            {% if card.pending %}<div class="waiting">{% icon 'message' 14 %} Waiting on {% for o in card.pending %}{{ o.interpreter.short_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+          </div>
+          <a class="btn ghost sm" href="{{ req.get_absolute_url }}">Details</a>
+        </div>
+        {% if card.top %}
+        <ol class="candidates">
+          {% for c in card.top %}{% include "scheduling/_candidate.html" with rank=forloop.counter %}{% endfor %}
+        </ol>
+        {% else %}
+        <p class="empty-cands">{% icon 'alert' 15 %} Nobody on the roster is free for this. Switch to video, assign from the full list, or use an outside line.</p>
+        {% endif %}
+        {% if card.fresh or req.modality == 'in_person' or card.more %}
+        <div class="card-foot">
+          {% if card.fresh %}<form method="post" action="{% url 'scheduling:offer' req.pk %}" class="inline">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn sm">{% icon 'message' 14 %} Offer to next {{ card.fresh }}</button></form>{% endif %}
+          {% if req.modality == 'in_person' %}<form method="post" action="{% url 'scheduling:video' req.pk %}" class="inline">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn sm">{% icon 'video' 14 %} Switch to video</button></form>{% endif %}
+          {% if card.more %}<a class="small muted" href="{{ req.get_absolute_url }}" style="margin-left:auto">+{{ card.more }} more ranked</a>{% endif %}
+        </div>
+        {% endif %}
+      </article>
+      {% endwith %}{% endfor %}
+    </section>
+    {% empty %}
+    <div class="card empty">
+      <div class="icon-wrap">{% icon 'check' 24 %}</div>
+      <strong>Every request is covered</strong>
+      <p>New requests appear here with the best-fit interpreters ranked.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <aside class="stack-lg">
+    <section class="card">
+      <div class="card-head"><div><h2>Coming up</h2><p>Assigned, today and tomorrow</p></div></div>
+      {% if assigned %}
+      <ul class="side-list">
+        {% for req in assigned %}
+        <li>
+          <div class="t">{{ req.starts_at|time:"g:i A" }}<span>{{ req.starts_at|date:"D" }}</span></div>
+          <div><a class="title" href="{{ req.get_absolute_url }}">{{ req.language }}</a> <span class="faint small">{{ req.reference }}</span><div class="who">{% icon req.modality 14 %} {{ req.interpreter.name }}{% if req.location %} · {{ req.location }}{% endif %}</div></div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="card-body muted small">Nothing assigned in the next two days.</p>{% endif %}
+    </section>
+
+    <section class="card">
+      <div class="card-head"><div><h2>Needs an outcome</h2><p>Record what happened to close it out</p></div></div>
+      {% if needs_outcome %}
+      <ul class="side-list">
+        {% for req in needs_outcome %}
+        <li>
+          <div class="t">{{ req.starts_at|date:"M j" }}<span>{{ req.starts_at|time:"g:i A" }}</span></div>
+          <div><a class="title" href="{{ req.get_absolute_url }}#outcome">{{ req.language }}</a> <span class="faint small">{{ req.reference }}</span><div class="who">{% if req.interpreter %}{{ req.interpreter.name }}{% else %}No interpreter assigned{% endif %}</div></div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}<p class="card-body muted small">All caught up.</p>{% endif %}
+    </section>
+  </aside>
+</div>
+{% endblock %}

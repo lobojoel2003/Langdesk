@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load langdesk %}
+{% block title %}SMS simulator{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>SMS simulator</h1><p>Reply to offers as an interpreter would. Uses the same parser as the real SMS webhook. Turn it off with <code>LANGDESK_SMS_SIMULATOR=false</code>.</p></div>
+</div>
+<div class="sim">
+  <nav class="card" aria-label="Interpreters">
+    <ul class="sim-people">
+      {% for p in people %}<li><a href="?interpreter={{ p.pk }}" class="{% if p.pk == person.pk %}active{% endif %}"><span class="avatar">{{ p.initials }}</span>{{ p.name }}</a></li>{% empty %}<li class="muted small" style="padding:.75rem">No interpreters with a phone number.</li>{% endfor %}
+    </ul>
+  </nav>
+  {% if person %}
+  <div class="phone">
+    <div class="phone-head"><strong>{{ person.name }}</strong><span class="small muted">{{ person.phone }}</span></div>
+    <div class="thread" aria-live="polite">
+      {% for m in thread %}
+        <div class="bubble-msg {{ m.direction }}">{{ m.body }}</div>
+        <div class="bubble-time {{ m.direction }}">{{ m.at|date:"M j, g:i A" }}</div>
+      {% empty %}
+        <p class="muted small" style="margin:auto;text-align:center">No texts yet. Create a request to send {{ person.name }} an offer.</p>
+      {% endfor %}
+    </div>
+    <form method="post" class="composer">{% csrf_token %}
+      <input type="hidden" name="interpreter" value="{{ person.pk }}">
+      <input type="text" name="body" placeholder="Text message" autocomplete="off" autofocus aria-label="Reply">
+      <button class="btn primary">Send</button>
+    </form>
+    <div class="quick small muted">Try: <code>YES 1234</code> · <code>NO</code> · <code>HELP</code> · <code>STOP</code></div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

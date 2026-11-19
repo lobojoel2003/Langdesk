@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% load langdesk %}
+{% block title %}Not found{% endblock %}
+{% block content %}
+<div class="card empty"><div class="icon-wrap">{% icon 'x' 22 %}</div><strong>We couldn't find that page</strong><p>It may have moved, or you may not have access to it.</p><a class="btn" href="{% url 'home' %}">Go to Langdesk</a></div>
+{% endblock %}

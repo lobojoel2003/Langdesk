@@ -1,0 +1,2 @@
+{% autoescape off %}{{ org }}: {{ req.language }} interpreter needed {{ when }}, {{ mode }}.
+Reply YES {{ offer.code }} to accept or NO {{ offer.code }} to decline. {{ offer_url }}{% endautoescape %}

@@ -1,0 +1,25 @@
+{% extends "base_public.html" %}
+{% load static %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<div class="public-brand"><img src="{% static 'langdesk/logo.svg' %}" alt=""> <span>Langdesk</span></div>
+<div class="card card-pad">
+  <h1 style="font-size:1.35rem">Sign in</h1>
+  <p class="muted small" style="margin-top:.35rem">Request and schedule interpreters for {{ org_name }}.</p>
+  {% if form.non_field_errors %}<div class="message error" style="margin:1rem 0">{{ form.non_field_errors|first }}</div>{% endif %}
+  <form method="post" style="margin-top:1.25rem">
+    {% csrf_token %}
+    <div class="field">
+      <label for="id_username">Username</label>
+      <input type="text" name="username" id="id_username" autocomplete="username" autofocus required value="{{ form.username.value|default:'' }}">
+    </div>
+    <div class="field">
+      <label for="id_password">Password</label>
+      <input type="password" name="password" id="id_password" autocomplete="current-password" required>
+    </div>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="btn primary block lg" type="submit" style="margin-top:1.4rem">Sign in</button>
+  </form>
+</div>
+{% if support_contact %}<p class="small muted" style="text-align:center;margin-top:1rem">Need an account? {{ support_contact }}</p>{% endif %}
+{% endblock %}

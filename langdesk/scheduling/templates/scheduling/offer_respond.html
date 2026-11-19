@@ -1,0 +1,29 @@
+{% extends "base_public.html" %}
+{% load static langdesk %}
+{% block title %}{{ req.language }} interpreting{% endblock %}
+{% block content %}
+<div class="public-brand"><img src="{% static 'langdesk/logo.svg' %}" alt=""> <span>{{ org_name }}</span></div>
+<div class="card card-pad offer-card">
+  {% if result == 'accepted' or offer.status == 'accepted' and req.interpreter_id == offer.interpreter_id %}
+    <div class="result good"><div class="icon-wrap">{% icon 'check' 28 %}</div><h1 style="font-size:1.35rem">You're confirmed</h1><p class="muted" style="margin-top:.4rem">Thank you, {{ offer.interpreter.name }}. We've sent the details{% if offer.interpreter.email %} and a calendar invite{% endif %}.</p></div>
+  {% elif result == 'declined' or offer.status == 'declined' %}
+    <div class="result neutral"><div class="icon-wrap">{% icon 'check' 28 %}</div><h1 style="font-size:1.35rem">Thanks for letting us know</h1><p class="muted" style="margin-top:.4rem">We'll offer it to someone else.</p></div>
+  {% elif not can_respond %}
+    <div class="result neutral"><div class="icon-wrap">{% icon 'x' 28 %}</div><h1 style="font-size:1.35rem">{% if req.status == 'cancelled' %}No longer needed{% else %}This one is covered{% endif %}</h1><p class="muted" style="margin-top:.4rem">No action needed. Thank you for being available.</p></div>
+  {% else %}
+    <p class="small muted" style="margin:0">Hello {{ offer.interpreter.name }}, can you take this?</p>
+    <div class="lang-big">{{ req.language }}</div>
+    <ul class="offer-list">
+      <li>{% icon 'calendar' 20 %}<div><strong>{{ req|when }}</strong><div class="small muted">{{ req.duration_minutes|hours }}</div></div></li>
+      <li>{% icon req.modality 20 %}<div><strong>{{ req.get_modality_display }}</strong>{% if req.modality == 'in_person' and req.location %}<div class="small muted">{{ req.location }}{% if req.location_detail %}, {{ req.location_detail }}{% endif %}{% if req.location.address %}<br>{{ req.location.address|linebreaksbr }}{% endif %}</div>{% endif %}</div></li>
+      <li>{% icon 'list' 20 %}<div><strong>{{ req.get_service_type_display }}</strong><div class="small muted mono">{{ req.reference }}{% if req.appointment_ref %} · {{ req.appointment_ref }}{% endif %}</div></div></li>
+      {% if req.notes %}<li>{% icon 'message' 20 %}<div class="small">{{ req.notes }}</div></li>{% endif %}
+    </ul>
+    <form method="post" class="offer-actions">{% csrf_token %}
+      <button class="btn primary lg" name="action" value="accept">{% icon 'check' 18 %} Accept</button>
+      <button class="btn lg" name="action" value="decline">Decline</button>
+    </form>
+    <p class="small muted" style="margin:.9rem 0 0;text-align:center">The first interpreter to accept gets it. You can also reply <strong>YES {{ offer.code }}</strong> to the text.</p>
+  {% endif %}
+</div>
+{% endblock %}

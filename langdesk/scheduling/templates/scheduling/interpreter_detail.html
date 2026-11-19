@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load langdesk %}
+{% block title %}{{ person.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="person">
+    <span class="avatar lg">{{ person.initials }}</span>
+    <div><h1>{{ person.name }}</h1><p>{{ person.get_employment_display }}{% if person.agency_name %} · {{ person.agency_name }}{% endif %}{% if person.home_location %} · based at {{ person.home_location }}{% endif %}{% if not person.is_active %} · <strong>inactive</strong>{% endif %}</p></div>
+  </div>
+  {% if user.is_staff %}<div class="head-actions"><a class="btn" href="{% url 'admin:roster_interpreter_change' person.pk %}">Edit in admin</a></div>{% endif %}
+</div>
+
+<section class="kpis">
+  <div class="kpi"><span class="label">Jobs this year</span><span class="value">{{ jobs_this_year }}</span></div>
+  <div class="kpi"><span class="label">Hours this year</span><span class="value">{{ hours_this_year }}</span></div>
+  <div class="kpi"><span class="label">Accepts offers</span><span class="value">{% if acceptance is not None %}{{ acceptance }}<small>%</small>{% else %}–{% endif %}</span><span class="note">of {{ answered }} answered or expired</span></div>
+  <div class="kpi"><span class="label">Coming up</span><span class="value">{{ upcoming|length }}</span></div>
+</section>
+
+<div class="grid-2">
+  <div class="stack-lg">
+    <section class="card">
+      <div class="card-head"><h2>Upcoming assignments</h2></div>
+      {% if upcoming %}
+      <div class="table-wrap"><table><tbody>
+        {% for req in upcoming %}<tr><td><a class="row-link" href="{{ req.get_absolute_url }}">{{ req.language }}</a> <span class="small muted mono">{{ req.reference }}</span></td><td class="nowrap">{{ req|when }}</td><td>{% icon req.modality 15 %} {{ req.place }}</td></tr>{% endfor %}
+      </tbody></table></div>
+      {% else %}<p class="card-body muted small">Nothing scheduled.</p>{% endif %}
+    </section>
+    {% if pending %}
+    <section class="card">
+      <div class="card-head"><h2>Waiting on their reply</h2></div>
+      <div class="table-wrap"><table><tbody>
+        {% for o in pending %}<tr><td><a class="row-link" href="{{ o.request.get_absolute_url }}">{{ o.request.language }}</a></td><td>{{ o.request|when }}</td><td class="mono">{{ o.code }}</td><td class="small muted">sent {{ o.sent_at|until }}</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    {% endif %}
+    <section class="card">
+      <div class="card-head"><h2>Recent work</h2></div>
+      {% if recent %}
+      <div class="table-wrap"><table><tbody>
+        {% for req in recent %}<tr><td><a class="row-link" href="{{ req.get_absolute_url }}">{{ req.language }}</a></td><td class="nowrap">{{ req.starts_at|date:"M j, Y" }}</td><td>{% status_pill req %}</td></tr>{% endfor %}
+      </tbody></table></div>
+      {% else %}<p class="card-body muted small">No completed assignments yet.</p>{% endif %}
+    </section>
+  </div>
+  <aside class="stack-lg">
+    <section class="card card-pad">
+      <h3>Calendar subscription</h3>
+      <p class="small muted" style="margin:.35rem 0 .75rem">Send this link to {{ person.name|default:"the interpreter" }}. It works in Google Calendar, Outlook and Apple Calendar and updates automatically.</p>
+      <div class="copy-row"><input id="feed-url" type="text" readonly value="{{ feed_url }}"><button class="btn sm" type="button" data-copy="feed-url">Copy</button></div>
+      <form method="post" style="margin-top:.75rem" data-confirm="Issue a new link? The current link stops working.">{% csrf_token %}<input type="hidden" name="action" value="rotate"><button class="btn ghost sm">Issue a new link</button></form>
+    </section>
+    <section class="card card-pad">
+      <h3>Languages</h3>
+      <ul class="side-list" style="margin:.5rem -1.25rem -1.25rem">
+        {% for skill in person.language_skills.all %}<li style="grid-template-columns:1fr auto"><div><strong>{{ skill.language }}</strong>{% if skill.credential_detail %}<div class="small muted">{{ skill.credential_detail }}</div>{% endif %}</div><div class="small">{{ skill.get_credential_display }}{% if skill.is_expired %} <span class="chip warn">expired</span>{% endif %}</div></li>{% endfor %}
+      </ul>
+    </section>
+    <section class="card card-pad">
+      <h3>Contact and availability</h3>
+      <dl class="facts" style="grid-template-columns:1fr;margin-top:.75rem">
+        <div><dt>Phone</dt><dd>{{ person.phone|default:"–" }}{% if person.sms_opt_out %} <span class="chip warn">texts off</span>{% endif %}</dd></div>
+        <div><dt>Email</dt><dd>{{ person.email|default:"–" }}</dd></div>
+        <div><dt>Works</dt><dd>{% if person.offers_in_person %}In person {% endif %}{% if person.offers_video %}· Video {% endif %}{% if person.offers_phone %}· Phone{% endif %}</dd></div>
+        <div><dt>Hours</dt><dd>{% for w in person.availability.all %}<div class="small">{{ w }}</div>{% empty %}<span class="small muted">Any time (no hours set)</span>{% endfor %}</dd></div>
+      </dl>
+    </section>
+  </aside>
+</div>
+{% endblock %}

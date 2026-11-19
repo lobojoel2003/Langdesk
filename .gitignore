@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+junit.xml
+htmlcov/
+
+# Django
+staticfiles/
+db.sqlite3
+*.sqlite3
+media/
+
+# Local configuration
+.env
+celerybeat-schedule*
+.DS_Store
+.idea/
+.vscode/

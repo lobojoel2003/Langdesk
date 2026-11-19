@@ -1,0 +1,12 @@
+<section class="card">
+  <div class="card-head"><div><h2>{{ title }}</h2><p>{{ subtitle }}</p></div></div>
+  <div class="card-body">
+    {% if bars %}
+    <ul class="bars">
+      {% for b in bars %}
+      <li><span class="name" title="{{ b.label }}">{{ b.label }}</span><div class="bar-track"><div class="bar" style="width:calc((100% - 4.75rem) * {{ b.fraction|stringformat:'.4f' }})" data-tip="{{ b.label }}: {{ b.value }}{{ unit }}"></div><span class="bar-value">{{ b.value }}{{ unit }}{% if b.detail %}<small>{{ b.detail }}</small>{% endif %}</span></div></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="muted small">No data for this period.</p>{% endif %}
+  </div>
+</section>

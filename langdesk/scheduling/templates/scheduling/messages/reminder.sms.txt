@@ -1,0 +1,1 @@
+{% autoescape off %}{{ org }} reminder: {{ req.language }} {{ lead }}, {{ when }}, {{ mode }}. Ref {{ req.reference }}.{% if req.video_url %} Join: {{ req.video_url }}{% endif %}{% endautoescape %}

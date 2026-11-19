@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% load langdesk %}
+{% block title %}{{ req.reference }} · {{ req.language }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="row" style="gap:.6rem"><span class="mono muted">{{ req.reference }}</span>{% status_pill req %}</div>
+    <h1 style="margin-top:.35rem">{{ req.language }} · {{ req|when }}</h1>
+    <p>{% icon req.modality 16 %} {{ req.get_modality_display }}{% if req.fell_back_to_video %} (switched from in person){% endif %}{% if req.location %} · {{ req.location }}{% if req.location_detail %}, {{ req.location_detail }}{% endif %}{% endif %}</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn" href="{% url 'scheduling:ics' req.pk %}">{% icon 'calendar' 16 %} Add to calendar</a>
+    {% if can_manage and req.is_active %}
+      <a class="btn" href="{% url 'scheduling:edit' req.pk %}">Edit</a>
+      <form method="post" action="{% url 'scheduling:cancel' req.pk %}" class="inline" data-confirm="Cancel {{ req.reference }}? The interpreter will be told.">{% csrf_token %}<button class="btn danger">Cancel request</button></form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="stack-lg">
+    <section class="card">
+      <div class="card-body">
+        <dl class="facts">
+          <div><dt>When</dt><dd>{{ req|when }}<div class="small muted">{{ req.duration_minutes|hours }}{% if req.is_active and not req.has_started %} · starts {{ req.starts_at|until }}{% endif %}</div></dd></div>
+          <div><dt>How</dt><dd>{{ req.get_modality_display }}{% if req.requested_modality != req.modality %} <span class="small muted">(requested {{ req.requested_modality|modality_label|lower }})</span>{% endif %}</dd></div>
+          <div><dt>Where</dt><dd>{% if req.location %}{{ req.location }}{% if req.location_detail %}, {{ req.location_detail }}{% endif %}{% if req.location.address %}<div class="small muted">{{ req.location.address|linebreaksbr }}</div>{% endif %}{% else %}<span class="muted">–</span>{% endif %}</dd></div>
+          <div><dt>Type</dt><dd>{{ req.get_service_type_display }}{% if req.department %} · {{ req.department }}{% endif %}</dd></div>
+          <div><dt>Appointment</dt><dd>{% if req.appointment_ref %}<span class="mono">{{ req.appointment_ref }}</span>{% else %}<span class="muted">–</span>{% endif %}</dd></div>
+          <div><dt>Requested by</dt><dd>{{ req.requested_by.get_full_name|default:req.requested_by.get_username|default:"–" }}<div class="small muted">{{ req.created_at|date:"M j, g:i A" }}</div></dd></div>
+        </dl>
+        {% if req.notes %}<hr><div class="small"><strong>Notes for the interpreter</strong><p class="muted" style="margin:.25rem 0 0">{{ req.notes }}</p></div>{% endif %}
+        {% if req.video_url %}<hr><div class="field"><span class="label">Video link</span><div class="video-link">{% icon 'video' 16 %}<a id="video-url" href="{{ req.video_url }}" target="_blank" rel="noopener">{{ req.video_url }}</a></div></div>{% endif %}
+      </div>
+    </section>
+
+    {% if req.interpreter %}
+    <section class="card">
+      <div class="card-head"><h2>Interpreter</h2>{% if req.assigned_at %}<span class="small muted">assigned {{ req.assigned_at|date:"M j, g:i A" }}</span>{% endif %}</div>
+      <div class="card-body spread">
+        <div class="person">
+          <span class="avatar lg">{{ req.interpreter.initials }}</span>
+          <div>
+            <div class="name">{% if is_coordinator %}<a href="{% url 'scheduling:interpreter' req.interpreter.pk %}" style="color:inherit">{{ req.interpreter.name }}</a>{% else %}{{ req.interpreter.short_name }}{% endif %}</div>
+            <div class="small muted">{{ req.interpreter.get_employment_display }}{% if is_coordinator %}{% if req.interpreter.phone %} · {{ req.interpreter.phone }}{% endif %}{% if req.interpreter.email %} · {{ req.interpreter.email }}{% endif %}{% endif %}</div>
+          </div>
+        </div>
+        {% if is_coordinator and req.status == 'assigned' %}
+        <form method="post" action="{% url 'scheduling:unassign' req.pk %}" class="row" data-confirm="Release {{ req.interpreter.name }}? Langdesk will offer the job to the next people in line.">{% csrf_token %}
+          <input type="text" name="reason" placeholder="Reason (optional)" style="width:200px">
+          <button class="btn danger sm">Unassign</button>
+        </form>
+        {% endif %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if outcome_form %}
+    <section class="card" id="outcome">
+      <div class="card-head"><div><h2>Record the outcome</h2><p>Every request ends with an outcome. This is what the language-access report counts.</p></div></div>
+      <form method="post" action="{% url 'scheduling:outcome' req.pk %}" class="card-body">
+        {% csrf_token %}
+        <div class="radio-list">{% for choice in outcome_form.outcome %}<label>{{ choice.tag }} {{ choice.choice_label }}</label>{% endfor %}</div>
+        <div class="field-row" style="margin-top:1rem">
+          {% if req.interpreter %}<div class="field"><label for="id_actual_minutes">Minutes interpreted</label>{{ outcome_form.actual_minutes }}</div>{% endif %}
+          <div class="field" style="grid-column: span 2"><label for="id_notes">Note <span class="opt">(optional, no client details)</span></label>{{ outcome_form.notes }}</div>
+        </div>
+        <button class="btn primary" style="margin-top:1rem">Save outcome</button>
+      </form>
+    </section>
+    {% elif req.outcome %}
+    <section class="card">
+      <div class="card-head"><h2>Outcome</h2><span class="small muted">recorded {{ req.outcome_recorded_at|date:"M j, g:i A" }}{% if req.outcome_recorded_by %} by {{ req.outcome_recorded_by.get_full_name|default:req.outcome_recorded_by.get_username }}{% endif %}</span></div>
+      <div class="card-body">
+        <div class="row">{% status_pill req %}{% if req.actual_minutes %}<span class="muted small">{{ req.actual_minutes|hours }} interpreted</span>{% endif %}</div>
+        {% if req.outcome_notes %}<p class="muted small" style="margin:.75rem 0 0">{{ req.outcome_notes }}</p>{% endif %}
+        {% if req.cancel_reason %}<p class="muted small" style="margin:.75rem 0 0">Reason: {{ req.cancel_reason }}</p>{% endif %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if match %}
+    <section class="card">
+      <div class="card-head">
+        <div><h2>Ranked interpreters</h2><p>Best fit first. Points come from credential, staff or contract, site, case history and how busy they are.</p></div>
+        {% if req.status == 'open' %}<form method="post" action="{% url 'scheduling:offer' req.pk %}" class="inline">{% csrf_token %}<button class="btn sm">{% icon 'message' 14 %} Offer to next 3</button></form>{% endif %}
+      </div>
+      {% if match.candidates %}
+      <ol class="candidates" style="padding-top:.5rem">
+        {% for c in match.candidates %}{% include "scheduling/_candidate.html" with rank=forloop.counter %}{% endfor %}
+      </ol>
+      {% else %}<p class="card-body muted">Nobody on the roster is free for this right now.</p>{% endif %}
+      {% if match.excluded %}
+      <details class="disclose">
+        <summary>Not available ({{ match.excluded|length }})</summary>
+        <div class="table-wrap"><table><tbody>
+          {% for e in match.excluded %}<tr><td>{{ e.interpreter.name }}</td><td class="muted">{{ e.reason }}</td></tr>{% endfor %}
+        </tbody></table></div>
+      </details>
+      {% endif %}
+      {% if others %}
+      <details class="disclose">
+        <summary>Assign anyone who speaks {{ req.language }}</summary>
+        <form method="post" action="{% url 'scheduling:assign' req.pk %}" class="card-body row" style="padding-top:0">{% csrf_token %}
+          <select name="interpreter" style="max-width:320px">{% for p in others %}<option value="{{ p.pk }}">{{ p.name }}</option>{% endfor %}</select>
+          <button class="btn primary sm">Assign</button>
+          <span class="help">Overrides availability rules. The interpreter is notified straight away.</span>
+        </form>
+      </details>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if offers %}
+    <section class="card">
+      <div class="card-head"><h2>Offers</h2><span class="small muted">{{ offers|length }} sent</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Interpreter</th><th>Code</th><th>Status</th><th>Sent</th><th>Replied</th></tr></thead>
+        <tbody>
+        {% for o in offers %}
+          <tr>
+            <td><strong>{{ o.interpreter.name }}</strong><div class="small muted">wave {{ o.wave }} · fit {{ o.score }}</div></td>
+            <td class="mono">{{ o.code }}</td>
+            <td><span class="pill tone-{{ o.status|offer_tone }}">{{ o.get_status_display }}</span></td>
+            <td class="nowrap small">{{ o.sent_at|date:"M j, g:i A" }}</td>
+            <td class="nowrap small">{% if o.responded_at %}{{ o.responded_at|date:"g:i A" }} by {{ o.response_channel }}{% else %}<span class="faint">–</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </section>
+    {% endif %}
+
+    {% if notifications %}
+    <section class="card">
+      <div class="card-head"><h2>Messages</h2><span class="small muted">texts and emails sent for this request</span></div>
+      {% for n in notifications %}
+      <details class="disclose">
+        <summary><span>{% icon n.channel 14 %} {{ n.get_kind_display }} · {{ n.to_address }} <span class="faint small">{{ n.created_at|date:"M j, g:i A" }}</span></span><span class="pill tone-{% if n.status == 'sent' %}assigned{% elif n.status == 'failed' %}cancelled{% else %}offered{% endif %}">{{ n.get_status_display }}</span></summary>
+        <div style="padding:0 1.25rem 1rem">{% if n.subject %}<div class="small"><strong>{{ n.subject }}</strong></div>{% endif %}<pre class="msg-body">{{ n.body }}</pre>{% if n.error %}<p class="small" style="color:var(--danger);margin-top:.5rem">{{ n.error }}</p>{% endif %}</div>
+      </details>
+      {% endfor %}
+    </section>
+    {% endif %}
+  </div>
+
+  <aside class="stack-lg">
+    {% if can_manage and req.status == 'open' and req.modality == 'in_person' %}
+    <section class="card card-pad">
+      <h3>No one confirmed yet?</h3>
+      <p class="small muted" style="margin:.35rem 0 .9rem">Switch to a video link now instead of waiting for the automatic fallback.</p>
+      <form method="post" action="{% url 'scheduling:video' req.pk %}">{% csrf_token %}<button class="btn block">{% icon 'video' 16 %} Switch to video</button></form>
+    </section>
+    {% endif %}
+    <section class="card">
+      <div class="card-head"><h2>History</h2><span class="small muted">audit log</span></div>
+      <ol class="timeline" style="padding-top:1rem">
+        {% for e in events %}
+        <li class="k-{{ e.kind }}"><div class="msg">{{ e.message }}</div><div class="meta">{{ e.created_at|date:"M j, g:i A" }} · {{ e.actor_label }}</div></li>
+        {% endfor %}
+      </ol>
+    </section>
+  </aside>
+</div>
+{% endblock %}

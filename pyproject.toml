@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "langdesk"
+dynamic = ["version"]
+description = "Self-hosted interpreter scheduling for clinics, schools and legal aid offices."
+readme = "README.md"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+authors = [{ name = "Joel Stain Lobo" }]
+keywords = ["interpreter", "scheduling", "language-access", "django", "lep", "accessibility"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Web Environment",
+  "Framework :: Django",
+  "Framework :: Django :: 5.2",
+  "Intended Audience :: Healthcare Industry",
+  "Intended Audience :: Education",
+  "Intended Audience :: Legal Industry",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Office/Business :: Scheduling",
+]
+dependencies = [
+  "Django>=5.2,<6.0",
+  "celery[redis]>=5.5,<6",
+  "psycopg[binary]>=3.2,<4",
+  "dj-database-url>=2.2,<4",
+  "icalendar>=6.0,<8",
+  "requests>=2.32,<3",
+  "whitenoise>=6.7,<7",
+  "gunicorn>=23,<28",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "pytest-django>=4.9",
+  "pytest-cov>=5",
+  "freezegun>=1.5",
+  "ruff>=0.8",
+  "build>=1.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/lobojoel2003/Langdesk"
+Documentation = "https://github.com/lobojoel2003/Langdesk#readme"
+Changelog = "https://github.com/lobojoel2003/Langdesk/blob/main/CHANGELOG.md"
+Issues = "https://github.com/lobojoel2003/Langdesk/issues"
+
+[tool.setuptools.dynamic]
+version = { attr = "langdesk.version.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["langdesk*"]
+
+[tool.setuptools.package-data]
+"*" = ["templates/**/*", "static/**/*", "fixtures/*"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+addopts = "-ra --strict-markers"
+testpaths = ["tests"]
+filterwarnings = ["error::RuntimeWarning", "ignore:No directory at:UserWarning"]
+
+[tool.coverage.run]
+source = ["langdesk"]
+branch = true
+omit = ["langdesk/*/migrations/*", "langdesk/wsgi.py", "langdesk/asgi.py"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["langdesk/*/migrations"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "DJ", "SIM", "C4", "RUF", "S", "PIE", "RET"]
+ignore = ["RUF001", "RUF012", "S105", "S106", "S308"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S107", "S311", "E501", "RUF015", "RUF059", "SIM117"]
+"langdesk/core/management/commands/seed_demo.py" = ["S311", "E501"]
+"langdesk/core/templatetags/langdesk.py" = ["E501"]

@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% load langdesk %}
+{% block title %}Not allowed{% endblock %}
+{% block content %}
+<div class="card empty"><div class="icon-wrap">{% icon 'lock' 22 %}</div><strong>You don't have access to this</strong><p>Ask your language access coordinator if you need it.</p><a class="btn" href="{% url 'home' %}">Go to Langdesk</a></div>
+{% endblock %}
